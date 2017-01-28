@@ -2,7 +2,10 @@
 # ------------------------------------------------------------------
 # [Dean] local web sitesetup wizard
 #	adds specified domain to hosts file, sets up vhost config, prompts for server restart
-#	global vars used in var definition section must be defined
+#	
+# Deps:
+# 	global vars used in var definition section must be defined
+#		source deanbot/bash-utils/io-utils.sh
 # ------------------------------------------------------------------
 
 ## var definitition 
@@ -25,44 +28,6 @@ domain=
 status=
 hostsline=
 formattedwebdir=${webdir///c/C:}
-
-## method definition
-
-# accepts any non-empty input
-non_null_val () {
-  local __prompt="$1"
-  local __default="$2"
-  while true; do
-    if [ ! -z "$__default" ]; then
-      read -e -p "$__prompt" -i "$__default" val
-    else
-      read -e -p "$__prompt" val
-    fi
-    if [ ! -z "$val" ]; then
-      break
-    fi
-  done
-  echo "$val"
-}
-
-# accepts only inputs: yYnN
-y_or_n_val () {
-  local __prompt="$1"
-  local __default="$2"
-  while true; do
-    if [ ! -z "$__default" ]; then
-      read -e -p "$__prompt" -i "$__default" val
-    else
-      read -e -p "$__prompt" val
-    fi
-    if [ ! -z "$val" ]; then
-      if [[ "$val" =~ ^([yY]|[nN])$ ]]; then
-        break
-      fi
-    fi
-  done
-  echo "$val"
-}
 
 ## start
 
@@ -139,19 +104,5 @@ echo "Press [Enter] when finished."
 echo "..."
 read blank
 
-echo -n $'\E[0m'
-echo $''
-echo $''
-echo $'       /\\__/\\'
-echo $'      /`    \'\\'
-echo $'    === 0  0 ==='
-echo $'      \  --  /'
-echo $'     /        \\'
-echo $'    /          \\'
-echo $'   |            |'
-echo $'    \\  ||  ||  /'
-echo $'     \\_oo__oo_/#######o'
-echo $''
-echo $'      All done!'
-echo $''
+catsay "All Done!"
 exit $status
