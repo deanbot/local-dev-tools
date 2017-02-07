@@ -27,6 +27,7 @@ MSG_PERMISSION_DENIED="Permission Denied. Run as admin and try again."
 domain=
 status=
 hostsline=
+serve=
 formattedwebdir=${webdir///c/C:}
 
 ## start
@@ -45,6 +46,7 @@ fi
 if [ $# -eq 0 ]; then
   # prompt for domain
   domain=$(non_null_val "Enter domain name of the dev site (ie: mysite.dev): ")
+  serve=$(non_null_val "Add directory to serve (i.e. /dist): " "/")
 else
   domain=$@
 
@@ -92,7 +94,7 @@ if [ $? -eq $SUCCESS ]; then
 else
 	printf "\n\n%s" "<VirtualHost *:80>
 	ServerName $domain
-	DocumentRoot \"$formattedwebdir$domain\"
+	DocumentRoot \"$formattedwebdir$domain$serve\"
 </VirtualHost>" >> "$vhosts";
 	echo "Success: virtual host config added."
 fi
