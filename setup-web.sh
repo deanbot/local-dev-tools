@@ -5,106 +5,111 @@
 #	
 # Deps:
 # 	global vars used in var definition section must be defined
-#		source deanbot/bash-utils/io-utils.sh
+#		source dv/bash-utils/io-utils.sh
 # ------------------------------------------------------------------
 
-## var definitition 
+# add line in hosts file that ties localhost to the passed domain name
+function writetohosts()
+{
+  local __domain=$1
+  local __returnvar=$2
+  local __hostsline="127.0.0.1 $__domain"
 
-#plugable vars
-hosts=$HOSTS
-vhosts=$VHOSTS
-webdir=$WEB_DIR
-sql_user=$SQL_USER
-sql_pass=$SQL_PASS
-
-#app constants
-SUCCESS=0
-TRUE=1
-FALSE=0
-MSG_PERMISSION_DENIED="Permission Denied. Run as admin and try again."
-
-#app vars
-domain=
-status=
-hostsline=
-serve=
-formattedwebdir=${webdir///c/C:}
-
-## start
-
-# test for write access on hosts file
-echo "Testing write access to hosts file..."
-bash -c "printf \"%s\" \"\" >> \"$hosts\""
-if [ $? -eq $SUCCESS ]; then
-  echo "Success: hosts file can be editted."
-else
-  echo $MSG_PERMISSION_DENIED
-  status=$FAILURE
-  exit $status
-fi
-
-if [ $# -eq 0 ]; then
-  # prompt for domain
-  domain=$(non_null_val "Enter domain name of the dev site (ie: mysite.dev): ")
-  serve=$(non_null_val "Add directory to serve (i.e. /dist): " "/")
-else
-  domain=$@
-
-  #for var in "$@"; do
-  #  if [ ! -z "$allpages" ]; then
-  #    allpages="${allpages}, ${var}"
-  #  else
-  #    allpages=$var
-  #  fi
-  #done
-fi
-
-# add line to hosts file
-hostsline="127.0.0.1 $domain"
-# echo "Checking hosts file for domain..."
-grep -q "$domain" "$hosts"  # -q is for quiet. Shhh...
-if [ $? -eq $SUCCESS ]; then
-	echo "Notice: $domain found in hosts file."
-else
-  bash -c "printf \"\n%s\" \"$hostsline\" >> \"$hosts\""
-  if [ $? -eq $SUCCESS  ]
-  then
-    echo "Sucess: $domain added to hosts file."
+  # echo "Checking hosts file for domain..."
+  grep -q "$__domain" "$HOSTS"  # -q is for quiet. Shhh...
+  if [ $? -eq 0 ]; then
+    echo "Notice: $__domain found in hosts file."
+    eval $__returnvar="2"
   else
-    echo $MSG_PERMISSION_DENIED
-    # set status to failure
-    status=$FAILURE
-    exit $status
+    bash -c "printf \"\n%s\" \"$__hostsline\" >> \"$HOSTS\""
+    eval $__returnvar=$?
   fi
-fi
-
-# setup web directory
-if [ ! -d "$webdir$domain" ]; then
-  mkdir $webdir$domain
-  echo "Success: web directory created"
-else
-  echo "Notice: web directory already exists"
-fi
+}
 
 # add virtual host config
-# echo "Checking virtual hosts file for domain..."
-grep -q "$domain" "$vhosts"
-if [ $? -eq $SUCCESS ]; then
-	echo "Notice: $domain found in virtual hosts file."
-else
-	printf "\n\n%s" "<VirtualHost *:80>
-	ServerName $domain
-	DocumentRoot \"$formattedwebdir$domain$serve\"
-</VirtualHost>" >> "$vhosts";
-	echo "Success: virtual host config added."
-fi
+function writetovhosts()
+{
+  local __domain=$1
+  local __serve=$2
+  local __returnvar=$3
 
-# prompt to restart server
-echo "..."
-echo "Please restart web server."
-echo "Press [Enter] when finished."
-echo "..."
-read blank
+  # echo "Checking virtual hosts file for domain..."
+  grep -q "$__domain" "$VHOSTS"
+  if [ $? -eq 0 ]; then
+    echo "Notice: $__domain found in virtual hosts file."
+    eval $__returnvar="2"
+  else
+    local __formattedwebdir=${WEB_DIR///c/C:}
+    printf "\n\n%s" "<VirtualHost *:80>
+ServerName $__domain
+DocumentRoot \"__formattedwebdir$__domain$__serve\"
+</VirtualHost>" >> "$VHOSTS";
+    eval $__returnvar=$?
+  fi
+}
 
-catsay "All Done!"
-exit $status
+function setup_web() {
+  local __domain=$1
+  local __serve=$2
+
+  # test write access
+  testwrite $HOSTS writeaccess
+
+  if [ $writeaccess -eq 1 ]; then
+    # no write access
+    echo "Permission Denied. Run as admin and try again."
+  else
+
+    # get inputs if necessary
+    if [[ "$__domain" ]]; then
+      # domain passed as first argument
+      #echo "using domain: $__domain."
+      :
+    else
+      __domain=$(non_null_val "Enter domain name of the dev site (ie: mysite.dev): ")
+    fi
+    if [[ "$__serve" ]]; then
+      # serve directory passed as second argument
+      #echo "using serve directory: $__serve."
+      :
+    else
+      __serve=$(non_null_val "Add directory to serve (i.e. /dist): " "/")
+    fi
+
+    # add line in hosts file that ties localhost to the passed domain name
+    writetohosts "$__domain" hostsresult
+    if [ $hostsresult -eq 2 ]; then
+      :
+    elif [$hostsresult -eq 0 ]; then
+      echo "Sucess: $__domain added to hosts file."
+    else
+      echo "Failed to write to hosts file."
+    fi
+
+    # setup web directory
+    if [ ! -d "$WEB_DIR$__domain" ]; then
+      mkdir $WEB_DIR$__domain
+      echo "Success: web directory created."
+    else
+      echo "Notice: web directory already exists."
+    fi
+
+    writetovhosts "$__domain" "$__serve" vhostsresult
+    if [ $vhostsresult -eq 2 ]; then
+      :
+    elif [$vhostsresult -eq 0]; then
+      echo "Success: virtual host config added."
+    else
+      echo "Failed to write to vhosts file."
+    fi
+
+    # prompt to restart server
+    echo "..."
+    echo "Please restart web server."
+    echo "Press [Enter] when finished."
+    echo "..."
+    read blank
+
+  fi
+}
+export -f setup_web
