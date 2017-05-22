@@ -42,7 +42,7 @@ function writetovhosts()
     local __formattedwebdir=${WEB_DIR///c/C:}
     printf "\n\n%s" "<VirtualHost *:80>
 ServerName $__domain
-DocumentRoot \"__formattedwebdir$__domain$__serve\"
+DocumentRoot \"$__formattedwebdir$__domain$__serve\"
 </VirtualHost>" >> "$VHOSTS";
     eval $__returnvar=$?
   fi
@@ -51,6 +51,7 @@ DocumentRoot \"__formattedwebdir$__domain$__serve\"
 function setup_web() {
   local __domain=$1
   local __serve=$2
+  local __returnvar=$3
 
   # test write access
   testwrite $HOSTS writeaccess
@@ -58,6 +59,7 @@ function setup_web() {
   if [ $writeaccess -eq 1 ]; then
     # no write access
     echo "Permission Denied. Run as admin and try again."
+    eval $__returnvar="1"
   else
 
     # get inputs if necessary
@@ -80,7 +82,7 @@ function setup_web() {
     writetohosts "$__domain" hostsresult
     if [ $hostsresult -eq 2 ]; then
       :
-    elif [$hostsresult -eq 0 ]; then
+    elif [ $hostsresult -eq 0 ]; then
       echo "Sucess: $__domain added to hosts file."
     else
       echo "Failed to write to hosts file."
@@ -97,7 +99,7 @@ function setup_web() {
     writetovhosts "$__domain" "$__serve" vhostsresult
     if [ $vhostsresult -eq 2 ]; then
       :
-    elif [$vhostsresult -eq 0]; then
+    elif [ $vhostsresult -eq 0 ]; then
       echo "Success: virtual host config added."
     else
       echo "Failed to write to vhosts file."
@@ -109,6 +111,7 @@ function setup_web() {
     echo "Press [Enter] when finished."
     echo "..."
     read blank
+    eval $__returnvar=0
 
   fi
 }
