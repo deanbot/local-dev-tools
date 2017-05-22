@@ -22,7 +22,6 @@ function remove_wp_site() {
 	echo "..."
 	read blank
 
-	# navigate
 	eval wp db drop --yes --path=$WEB_DIR$__domain/wordpress;
 	rm -rf $WEB_DIR$__domain
 	echo "Removed $WEB_DIR$__domain"
